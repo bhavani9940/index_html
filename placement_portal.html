@@ -1,0 +1,550 @@
+from pathlib import Path
+import webbrowser
+
+html = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlacementHub - Student Placement Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --primary:#4f46e5;
+      --secondary:#7c3aed;
+      --dark:#111827;
+      --muted:#64748b;
+      --light:#f5f7fb;
+      --success:#16a34a;
+      --danger:#dc2626;
+    }
+    body{font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--light);color:#1e293b}
+    .navbar{background:linear-gradient(135deg,var(--primary),var(--secondary));box-shadow:0 4px 18px rgba(79,70,229,.2)}
+    .navbar-brand{font-weight:800;letter-spacing:.3px}
+    .nav-link{color:#fff!important;opacity:.9;margin-left:8px}
+    .nav-link:hover{opacity:1}
+    .hero{background:linear-gradient(135deg,#4338ca,#7c3aed);color:white;border-radius:0 0 28px 28px;padding:55px 0 75px}
+    .hero h1{font-weight:800;font-size:clamp(2rem,5vw,3.5rem)}
+    .hero p{font-size:1.08rem;opacity:.9;max-width:680px}
+    .btn-light{font-weight:700}
+    .dashboard-wrap{margin-top:-45px}
+    .stat-card,.panel,.company-card,.resource-card{background:#fff;border:0;border-radius:18px;box-shadow:0 8px 28px rgba(15,23,42,.07)}
+    .stat-card{padding:22px;height:100%}
+    .stat-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#eef2ff;color:var(--primary);font-size:22px}
+    .stat-number{font-size:1.8rem;font-weight:800}
+    .section-title{font-weight:800;color:var(--dark)}
+    .company-card{padding:22px;height:100%;transition:.2s}
+    .company-card:hover{transform:translateY(-4px);box-shadow:0 14px 35px rgba(15,23,42,.11)}
+    .company-logo{width:54px;height:54px;border-radius:15px;background:#eef2ff;color:var(--primary);display:grid;place-items:center;font-weight:800;font-size:20px}
+    .badge-soft{padding:7px 10px;border-radius:999px;font-weight:700;font-size:.75rem}
+    .eligible{background:#dcfce7;color:#166534}
+    .noteligible{background:#fee2e2;color:#991b1b}
+    .applied{background:#dbeafe;color:#1d4ed8}
+    .timeline{position:relative;padding-left:34px}
+    .timeline:before{content:"";position:absolute;left:10px;top:5px;bottom:5px;width:3px;background:#e2e8f0}
+    .step{position:relative;margin-bottom:25px}
+    .step-dot{position:absolute;left:-30px;top:2px;width:20px;height:20px;border-radius:50%;background:#cbd5e1;border:4px solid #fff;box-shadow:0 0 0 2px #cbd5e1}
+    .step.done .step-dot{background:var(--success);box-shadow:0 0 0 2px #bbf7d0}
+    .step.current .step-dot{background:var(--primary);box-shadow:0 0 0 2px #c7d2fe}
+    .resource-card{padding:20px;height:100%}
+    .resource-icon{font-size:30px}
+    footer{background:#111827;color:#cbd5e1;margin-top:55px}
+    .modal-content{border:0;border-radius:20px}
+    .form-control,.form-select{border-radius:10px;padding:11px}
+    .profile-box{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-radius:18px;padding:25px}
+    .progress{height:10px;border-radius:20px}
+    .toast-container{z-index:9999}
+    .auth-screen{min-height:100vh;background:linear-gradient(135deg,#4338ca,#7c3aed);display:flex;align-items:center;justify-content:center;padding:25px}
+    .auth-card{width:100%;max-width:470px;background:#fff;border-radius:24px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+    .auth-logo{width:64px;height:64px;border-radius:18px;background:#eef2ff;display:grid;place-items:center;font-size:30px;margin:auto}
+    .auth-tabs .btn{border-radius:10px;font-weight:700}
+    .hidden{display:none!important}
+    .user-chip{color:#fff;font-size:.9rem;margin-left:12px}
+  </style>
+</head>
+<body>
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🎓</div>
+    <h2 class="text-center fw-bold mt-3">PlacementHub</h2>
+    <p class="text-center text-muted mb-4">Student Placement Preparation & Tracking System</p>
+
+    <div class="auth-tabs d-flex gap-2 mb-4">
+      <button id="loginTab" class="btn btn-primary flex-fill" onclick="showAuth('login')">Login</button>
+      <button id="signupTab" class="btn btn-outline-primary flex-fill" onclick="showAuth('signup')">Create Account</button>
+    </div>
+
+    <div id="loginBox">
+      <label class="form-label fw-semibold">Username</label>
+      <input id="loginUsername" class="form-control mb-3" placeholder="Enter username" autocomplete="username">
+      <label class="form-label fw-semibold">Password</label>
+      <input id="loginPassword" class="form-control mb-3" type="password" placeholder="Enter password" autocomplete="current-password">
+      <button class="btn btn-primary w-100 py-2" onclick="loginUser()">Login</button>
+      <p class="text-muted small text-center mt-3 mb-0">Don't have an account? Click "Create Account".</p>
+    </div>
+
+    <div id="signupBox" class="hidden">
+      <label class="form-label fw-semibold">Full Name</label>
+      <input id="signupName" class="form-control mb-3" placeholder="Enter your full name">
+      <label class="form-label fw-semibold">Username</label>
+      <input id="signupUsername" class="form-control mb-3" placeholder="Choose a username" autocomplete="username">
+      <label class="form-label fw-semibold">Password</label>
+      <input id="signupPassword" class="form-control mb-3" type="password" placeholder="Create a password" autocomplete="new-password">
+      <label class="form-label fw-semibold">Confirm Password</label>
+      <input id="signupConfirm" class="form-control mb-3" type="password" placeholder="Confirm your password" autocomplete="new-password">
+      <button class="btn btn-primary w-100 py-2" onclick="createAccount()">Create Account</button>
+      <p class="text-muted small text-center mt-3 mb-0">Your profile can be edited after login.</p>
+    </div>
+
+    <div id="authMessage" class="alert mt-3 mb-0 hidden"></div>
+  </div>
+</div>
+
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <div class="container">
+    <a class="navbar-brand" href="#">🎓 PlacementHub</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="#dashboard">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="#companies">Companies</a></li>
+        <li class="nav-item"><a class="nav-link" href="#resources">Preparation</a></li>
+        <li class="nav-item"><span id="navUser" class="user-chip"></span></li>
+        <li class="nav-item"><button class="btn btn-light btn-sm ms-lg-2" onclick="openProfile()">My Profile</button></li>
+        <li class="nav-item"><button class="btn btn-outline-light btn-sm ms-lg-2" onclick="logoutUser()">Logout</button></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge bg-white text-primary rounded-pill px-3 py-2 mb-3">STUDENT PLACEMENT PORTAL</span>
+        <h1>Build your career.<br>Track every opportunity.</h1>
+        <p class="mt-3">Manage your profile, discover eligible companies, apply for drives, and track your placement journey from application to selection.</p>
+        <div class="mt-4">
+          <a href="#companies" class="btn btn-light px-4 me-2">Explore Companies</a>
+          <a href="#resources" class="btn btn-outline-light px-4">Start Preparing</a>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="bg-white text-dark p-4 rounded-4 shadow">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <small class="text-muted">Placement Readiness</small>
+              <h2 class="fw-bold mb-0">82%</h2>
+            </div>
+            <div class="display-5">🚀</div>
+          </div>
+          <div class="progress mt-3">
+            <div class="progress-bar bg-success" style="width:82%"></div>
+          </div>
+          <small class="text-muted">Keep preparing to improve your score.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container dashboard-wrap" id="dashboard">
+  <div class="row g-3 mb-5">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between"><div><div class="text-muted small">Companies</div><div class="stat-number">24</div></div><div class="stat-icon">🏢</div></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between"><div><div class="text-muted small">Eligible</div><div class="stat-number text-success">15</div></div><div class="stat-icon">✓</div></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between"><div><div class="text-muted small">Applications</div><div class="stat-number">7</div></div><div class="stat-icon">📄</div></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between"><div><div class="text-muted small">Selected</div><div class="stat-number text-success">2</div></div><div class="stat-icon">🏆</div></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="mb-5" id="companies">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+      <div>
+        <h2 class="section-title mb-1">Upcoming Companies</h2>
+        <p class="text-muted mb-0">Check eligibility and apply for campus recruitment drives.</p>
+      </div>
+      <select id="filter" class="form-select mt-3 mt-md-0" style="width:180px" onchange="filterCompanies()">
+        <option value="all">All Companies</option>
+        <option value="eligible">Eligible</option>
+        <option value="applied">Applied</option>
+      </select>
+    </div>
+
+    <div class="row g-4" id="companyList"></div>
+  </section>
+
+  <section class="row g-4 mb-5">
+    <div class="col-lg-7">
+      <div class="panel p-4 h-100">
+        <h3 class="section-title mb-1">Placement Progress</h3>
+        <p class="text-muted">Your latest recruitment journey</p>
+        <div class="timeline mt-4">
+          <div class="step done"><span class="step-dot"></span><h6 class="fw-bold mb-1">Application Submitted</h6><small class="text-muted">Completed • 28 Aug 2026</small></div>
+          <div class="step done"><span class="step-dot"></span><h6 class="fw-bold mb-1">Aptitude Test</h6><small class="text-muted">Completed • Score: 84%</small></div>
+          <div class="step current"><span class="step-dot"></span><h6 class="fw-bold mb-1">Technical Interview</h6><small class="text-primary fw-semibold">Scheduled • 05 Sep 2026</small></div>
+          <div class="step"><span class="step-dot"></span><h6 class="fw-bold mb-1">HR Interview</h6><small class="text-muted">Pending</small></div>
+          <div class="step"><span class="step-dot"></span><h6 class="fw-bold mb-1">Final Result</h6><small class="text-muted">Pending</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="panel p-4 h-100">
+        <h3 class="section-title">Student Profile</h3>
+        <div class="profile-box mt-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="company-logo bg-white">BK</div>
+            <div><h5 class="fw-bold mb-1">Bhavani K</h5><div class="text-muted">B.Tech AI & Data Science</div></div>
+          </div>
+          <hr>
+          <div class="row g-3">
+            <div class="col-6"><small class="text-muted">CGPA</small><div class="fw-bold">8.6 / 10</div></div>
+            <div class="col-6"><small class="text-muted">Arrears</small><div class="fw-bold">0</div></div>
+            <div class="col-6"><small class="text-muted">Department</small><div class="fw-bold">AI & DS</div></div>
+            <div class="col-6"><small class="text-muted">Skills</small><div class="fw-bold">Python, Java</div></div>
+          </div>
+          <button class="btn btn-primary w-100 mt-4" onclick="openProfile()">Edit Profile</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="resources" class="mb-5">
+    <div class="mb-3">
+      <h2 class="section-title mb-1">Placement Preparation</h2>
+      <p class="text-muted">Practice the skills you need for every recruitment round.</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-3"><div class="resource-card"><div class="resource-icon">🧠</div><h5 class="fw-bold mt-3">Aptitude</h5><p class="text-muted small">Quantitative, logical reasoning and verbal practice.</p><button class="btn btn-outline-primary btn-sm" onclick="practice('Aptitude')">Practice Now</button></div></div>
+      <div class="col-md-3"><div class="resource-card"><div class="resource-icon">💻</div><h5 class="fw-bold mt-3">Coding</h5><p class="text-muted small">Programming problems and interview coding questions.</p><button class="btn btn-outline-primary btn-sm" onclick="practice('Coding')">Practice Now</button></div></div>
+      <div class="col-md-3"><div class="resource-card"><div class="resource-icon">⚙️</div><h5 class="fw-bold mt-3">Technical</h5><p class="text-muted small">Core CS, AI, data science and technical interview topics.</p><button class="btn btn-outline-primary btn-sm" onclick="practice('Technical')">Practice Now</button></div></div>
+      <div class="col-md-3"><div class="resource-card"><div class="resource-icon">🗣️</div><h5 class="fw-bold mt-3">HR Interview</h5><p class="text-muted small">Frequently asked HR questions and communication tips.</p><button class="btn btn-outline-primary btn-sm" onclick="practice('HR Interview')">Practice Now</button></div></div>
+    </div>
+  </section>
+</main>
+
+<footer class="py-4">
+  <div class="container d-flex flex-wrap justify-content-between gap-2">
+    <div><strong>🎓 PlacementHub</strong><br><small>Student Placement Preparation & Tracking System</small></div>
+    <small>© 2026 College Placement Cell</small>
+  </div>
+</footer>
+
+<div class="modal fade" id="companyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-2">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold" id="modalTitle">Company</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-primary" id="modalApply">Apply Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="profileModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content p-2">
+      <div class="modal-header border-0"><h5 class="modal-title fw-bold">My Student Profile</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="profileForm">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Full Name</label><input id="name" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Email</label><input id="email" class="form-control" type="email" value="student@college.edu"></div>
+            <div class="col-md-6"><label class="form-label">Department</label><select id="department" class="form-select"><option>AI & Data Science</option><option>Computer Science</option><option>Information Technology</option><option>ECE</option></select></div>
+            <div class="col-md-3"><label class="form-label">CGPA</label><input id="cgpa" class="form-control" type="number" min="0" max="10" step=".1"></div>
+            <div class="col-md-3"><label class="form-label">Arrears</label><input id="arrears" class="form-control" type="number" min="0" step="1"></div>
+            <div class="col-12"><label class="form-label">Skills</label><input id="skills" class="form-control" placeholder="Python, Java, SQL, Machine Learning"></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0"><button class="btn btn-primary" onclick="saveProfile()">Save Profile</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="toast" class="toast">
+    <div class="toast-header"><strong class="me-auto">PlacementHub</strong><button class="btn-close" data-bs-dismiss="toast"></button></div>
+    <div class="toast-body" id="toastMsg">Done!</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const companies = [
+  {id:1,name:"TCS",logo:"T",role:"Software Engineer",package:"₹7.2 LPA",date:"08 Sep 2026",cgpa:"7.0",dept:"All Engineering",skills:"Java, Python, SQL",status:"eligible"},
+  {id:2,name:"Infosys",logo:"I",role:"Systems Engineer",package:"₹6.5 LPA",date:"12 Sep 2026",cgpa:"6.5",dept:"All Engineering",skills:"Java, SQL",status:"applied"},
+  {id:3,name:"Zoho",logo:"Z",role:"Member Technical Staff",package:"₹8.0 LPA",date:"16 Sep 2026",cgpa:"8.0",dept:"CSE / IT / AI&DS",skills:"Java, Python, DSA",status:"eligible"},
+  {id:4,name:"Accenture",logo:"A",role:"Application Developer",package:"₹7.8 LPA",date:"20 Sep 2026",cgpa:"7.5",dept:"All Engineering",skills:"Java, SQL, Cloud",status:"eligible"},
+  {id:5,name:"DataMind AI",logo:"D",role:"Junior Data Scientist",package:"₹9.0 LPA",date:"24 Sep 2026",cgpa:"8.5",dept:"AI&DS / CSE",skills:"Python, ML, SQL",status:"eligible"},
+  {id:6,name:"TechNova",logo:"N",role:"Graduate Engineer",package:"₹5.5 LPA",date:"28 Sep 2026",cgpa:"6.0",dept:"All Engineering",skills:"C, Java, Aptitude",status:"applied"}
+];
+
+let currentUser = localStorage.getItem("placementHubCurrentUser") || "";
+
+function getUsers(){
+  try { return JSON.parse(localStorage.getItem("placementHubUsers") || "{}"); }
+  catch(e){ return {}; }
+}
+function saveUsers(users){
+  localStorage.setItem("placementHubUsers", JSON.stringify(users));
+}
+function defaultProfile(name, username){
+  return {
+    name: name || username,
+    username: username,
+    email: "student@college.edu",
+    department: "AI & Data Science",
+    cgpa: 8.6,
+    arrears: 0,
+    skills: "Python, Java, SQL, Machine Learning",
+    applications: []
+  };
+}
+function showAuth(type){
+  const login = type === "login";
+  document.getElementById("loginBox").classList.toggle("hidden", !login);
+  document.getElementById("signupBox").classList.toggle("hidden", login);
+  document.getElementById("loginTab").className = login ? "btn btn-primary flex-fill" : "btn btn-outline-primary flex-fill";
+  document.getElementById("signupTab").className = login ? "btn btn-outline-primary flex-fill" : "btn btn-primary flex-fill";
+  hideAuthMessage();
+}
+function authMessage(msg, type="danger"){
+  const box=document.getElementById("authMessage");
+  box.textContent=msg;
+  box.className="alert mt-3 mb-0 alert-"+type;
+}
+function hideAuthMessage(){
+  document.getElementById("authMessage").className="alert mt-3 mb-0 hidden";
+}
+function createAccount(){
+  const name=document.getElementById("signupName").value.trim();
+  const username=document.getElementById("signupUsername").value.trim().toLowerCase();
+  const password=document.getElementById("signupPassword").value;
+  const confirm=document.getElementById("signupConfirm").value;
+  if(!name || !username || !password || !confirm) return authMessage("Please fill in all fields.");
+  if(!/^[a-zA-Z0-9_.-]{3,30}$/.test(username)) return authMessage("Username must be 3-30 characters and use letters, numbers, _, . or -.");
+  if(password.length < 6) return authMessage("Password must contain at least 6 characters.");
+  if(password !== confirm) return authMessage("Passwords do not match.");
+  const users=getUsers();
+  if(users[username]) return authMessage("Username already exists. Please choose another.");
+  users[username]={password:password, profile:defaultProfile(name,username)};
+  saveUsers(users);
+  currentUser=username;
+  localStorage.setItem("placementHubCurrentUser", username);
+  authMessage("Account created successfully! Opening your dashboard...", "success");
+  setTimeout(showApp, 350);
+}
+function loginUser(){
+  const username=document.getElementById("loginUsername").value.trim().toLowerCase();
+  const password=document.getElementById("loginPassword").value;
+  const users=getUsers();
+  if(!users[username] || users[username].password !== password){
+    return authMessage("Invalid username or password.");
+  }
+  currentUser=username;
+  localStorage.setItem("placementHubCurrentUser", username);
+  showApp();
+}
+function logoutUser(){
+  currentUser="";
+  localStorage.removeItem("placementHubCurrentUser");
+  document.getElementById("authScreen").classList.remove("hidden");
+  document.getElementById("loginUsername").value="";
+  document.getElementById("loginPassword").value="";
+  showAuth("login");
+}
+function getProfile(){
+  const users=getUsers();
+  if(!users[currentUser]) return null;
+  if(!users[currentUser].profile) users[currentUser].profile=defaultProfile(currentUser,currentUser);
+  return users[currentUser].profile;
+}
+function updateProfile(profile){
+  const users=getUsers();
+  users[currentUser].profile=profile;
+  saveUsers(users);
+}
+function showApp(){
+  if(!currentUser || !getProfile()){
+    document.getElementById("authScreen").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("authScreen").classList.add("hidden");
+  const p=getProfile();
+  document.getElementById("navUser").textContent="Hi, "+p.name;
+  updateProfileView();
+  renderCompanies();
+}
+function updateProfileView(){
+  const p=getProfile();
+  if(!p) return;
+  document.querySelector(".profile-box h5").textContent=p.name;
+  document.querySelector(".profile-box .text-muted").textContent=p.department;
+  document.querySelector(".profile-box .company-logo").textContent=
+    p.name.split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  const values=document.querySelectorAll(".profile-box .row .fw-bold");
+  values[0].textContent=Number(p.cgpa).toFixed(1)+" / 10";
+  values[1].textContent=p.arrears;
+  values[2].textContent=p.department;
+  values[3].textContent=p.skills || "Not added";
+  document.getElementById("navUser").textContent="Hi, "+p.name;
+}
+function openProfile(){
+  const p=getProfile();
+  if(!p) return;
+  document.getElementById("name").value=p.name;
+  document.getElementById("email").value=p.email || "";
+  document.getElementById("department").value=p.department || "AI & Data Science";
+  document.getElementById("cgpa").value=p.cgpa;
+  document.getElementById("arrears").value=p.arrears;
+  document.getElementById("skills").value=p.skills || "";
+  new bootstrap.Modal(document.getElementById("profileModal")).show();
+}
+function saveProfile(){
+  const p=getProfile();
+  const n=document.getElementById("name").value.trim();
+  const email=document.getElementById("email").value.trim();
+  const department=document.getElementById("department").value;
+  const cgpa=Number(document.getElementById("cgpa").value);
+  const arrears=Number(document.getElementById("arrears").value);
+  const skills=document.getElementById("skills").value.trim();
+
+  if(!n) return showToast("Name cannot be empty.");
+  if(!Number.isFinite(cgpa) || cgpa<0 || cgpa>10) return showToast("CGPA must be between 0 and 10.");
+  if(!Number.isInteger(arrears) || arrears<0) return showToast("Arrears must be 0 or a positive whole number.");
+
+  p.name=n;
+  p.email=email;
+  p.department=department;
+  p.cgpa=cgpa;
+  p.arrears=arrears;
+  p.skills=skills;
+  updateProfile(p);
+  updateProfileView();
+
+  bootstrap.Modal.getInstance(document.getElementById("profileModal")).hide();
+  showToast("Profile updated successfully!");
+}
+function userMeetsEligibility(c){
+  const p=getProfile();
+  if(!p) return false;
+  const deptOK = c.dept==="All Engineering" ||
+    c.dept.toLowerCase().split("/").some(d=>p.department.toLowerCase().includes(d.trim().replace("&","")));
+  const cgpaOK = Number(p.cgpa) >= Number(c.cgpa);
+  const arrearsOK = Number(p.arrears) === 0;
+  return cgpaOK && arrearsOK && deptOK;
+}
+function renderCompanies(){
+  const filter=document.getElementById("filter").value;
+  const p=getProfile();
+  const list=companies.filter(c=>{
+    let status=c.status;
+    if(p && (p.applications||[]).includes(c.id)) status="applied";
+    else if(!userMeetsEligibility(c)) status="noteligible";
+    return filter==="all" || (filter==="eligible" && status==="eligible") || (filter==="applied" && status==="applied");
+  });
+  document.getElementById("companyList").innerHTML=list.map(c=>{
+    const applied=p && (p.applications||[]).includes(c.id);
+    const eligible=userMeetsEligibility(c);
+    const status=applied?"applied":(eligible?"eligible":"noteligible");
+    return `
+    <div class="col-md-6 col-xl-4">
+      <div class="company-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="d-flex gap-3 align-items-center"><div class="company-logo">${c.logo}</div><div><h5 class="fw-bold mb-1">${c.name}</h5><small class="text-muted">${c.role}</small></div></div>
+          <span class="badge-soft ${status==='applied'?'applied':status==='eligible'?'eligible':'noteligible'}">${status==='applied'?'Applied':status==='eligible'?'Eligible':'Not Eligible'}</span>
+        </div>
+        <div class="mt-4"><div class="d-flex justify-content-between"><span class="text-muted">Package</span><strong>${c.package}</strong></div><div class="d-flex justify-content-between mt-2"><span class="text-muted">Drive Date</span><strong>${c.date}</strong></div></div>
+        <div class="mt-3"><small class="text-muted">Minimum CGPA: ${c.cgpa} • ${c.dept}</small><div class="mt-2"><span class="badge bg-light text-dark me-1">${c.skills.split(",")[0]}</span><span class="badge bg-light text-dark">${c.skills.split(",")[1] || ""}</span></div></div>
+        <button class="btn ${status==='applied'?'btn-outline-success':status==='eligible'?'btn-primary':'btn-outline-secondary'} w-100 mt-4" onclick="viewCompany(${c.id})">${status==='applied'?'View Application':status==='eligible'?'View Details & Apply':'View Details'}</button>
+      </div>
+    </div>`;
+  }).join("");
+  const p2=getProfile();
+  document.querySelectorAll(".stat-number")[2].textContent=(p2.applications||[]).length;
+}
+function viewCompany(id){
+  const c=companies.find(x=>x.id===id);
+  const p=getProfile();
+  const applied=(p.applications||[]).includes(id);
+  const eligible=userMeetsEligibility(c);
+  document.getElementById("modalTitle").textContent=c.name+" — "+c.role;
+  document.getElementById("modalBody").innerHTML=`
+    <div class="row g-3">
+      <div class="col-6"><small class="text-muted">Package</small><div class="fw-bold">${c.package}</div></div>
+      <div class="col-6"><small class="text-muted">Drive Date</small><div class="fw-bold">${c.date}</div></div>
+      <div class="col-12"><small class="text-muted">Eligibility Criteria</small><div class="fw-bold mt-1">CGPA ≥ ${c.cgpa}, ${c.dept}, No active arrears</div></div>
+      <div class="col-12"><small class="text-muted">Required Skills</small><div class="fw-bold mt-1">${c.skills}</div></div>
+      <div class="col-12"><div class="alert ${applied?'alert-info':eligible?'alert-success':'alert-danger'} mb-0">
+        ${applied?'Your application has been submitted.':eligible?'You meet the eligibility criteria for this drive.':'You are currently not eligible. Update your profile if any information is incorrect.'}
+      </div></div>
+    </div>`;
+  const btn=document.getElementById("modalApply");
+  btn.textContent=applied?"Application Submitted":eligible?"Apply Now":"Not Eligible";
+  btn.disabled=applied || !eligible;
+  btn.onclick=()=>applyCompany(id);
+  new bootstrap.Modal(document.getElementById("companyModal")).show();
+}
+function applyCompany(id){
+  const c=companies.find(x=>x.id===id);
+  const p=getProfile();
+  if(!userMeetsEligibility(c)) return showToast("You are not eligible for this company.");
+  p.applications=p.applications||[];
+  if(!p.applications.includes(id)) p.applications.push(id);
+  updateProfile(p);
+  renderCompanies();
+  bootstrap.Modal.getInstance(document.getElementById("companyModal")).hide();
+  showToast("Application submitted successfully for "+c.name+"!");
+}
+function filterCompanies(){renderCompanies()}
+function practice(type){showToast(type+" preparation section opened. Start practicing!")}
+function showToast(msg){
+  document.getElementById("toastMsg").textContent=msg;
+  new bootstrap.Toast(document.getElementById("toast")).show();
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  if(currentUser && getProfile()) showApp();
+  else showAuth("login");
+});
+</script>
+</body>
+</html>"""
+
+output = Path("/content/placement_portal.html")
+output.write_text(html, encoding="utf-8")
+print("Frontend created:", output)
+
+try:
+    from google.colab.output import eval_js
+    eval_js("window.open('file:///content/placement_portal.html', '_blank')")
+except Exception:
+    try:
+        webbrowser.open(output.as_uri())
+    except Exception:
+        pass
